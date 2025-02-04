@@ -3,7 +3,7 @@ name: Docker Image Build and Push
 on:
   push:
     tags:
-      - 'v1.0.0'  
+      - 'v1.1.0'  
 
 jobs:
   build-and-push:
