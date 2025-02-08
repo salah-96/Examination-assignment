@@ -1,0 +1,67 @@
+---
+- name: Rolling Update for Kubernetes Deployment
+  hosts: localhost
+  connection: local
+  vars:
+    image_version: latest  # Use 'latest' to test rollback with an incorrect image
+  tasks:
+
+    - name: Update Kubernetes Deployment to Latest Image
+      k8s:
+        state: present
+        namespace: default
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: nginx-deployment
+            namespace: default
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: nginx
+            template:
+              metadata:
+                labels:
+                  app: nginx
+                annotations:
+                  rollout_timestamp: "{{ ansible_date_time.iso8601 }}"
+              spec:
+                containers:
+                  - name: nginx
+                    # image: ghcr.io/salah-96/examination-assignment:{{ image_version }}  # Testing rollback with incorrect image
+                    image: ghcr.io/salah-96/examination-assignment:v1.1.0  # Correct image
+                    ports:
+                      - containerPort: 80
+                    imagePullSecrets:
+                      - name: ghcr-secret
+
+    - name: Wait for Deployment Rollout
+      shell: |
+        kubectl rollout status deployment/nginx-deployment --timeout=30s
+      register: rollout_status
+      failed_when: rollout_status.rc != 0
+      ignore_errors: true
+
+    - name: Handle Rollback on Failure
+      when: rollout_status.rc != 0
+      block:
+        - name: Display Rollback Failure Message
+          debug:
+            msg: "Deployment failed to update to image '{{ image_version }}'."
+
+        - name: Perform Rollback to Previous Version
+          shell: kubectl rollout undo deployment/nginx-deployment
+
+        - name: Get Current Image After Rollback
+          shell: |
+            kubectl get deployment nginx-deployment -o jsonpath='{.spec.template.spec.containers[0].image}'
+          register: current_image
+          changed_when: false
+
+        - name: Display Friendly Message
+          debug:
+            msg: >
+              Deployment failed to update to image '{{ image_version }}'.
+              Rolled back to the previous working image '{{ current_image.stdout }}'.
