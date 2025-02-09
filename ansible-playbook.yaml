@@ -60,8 +60,8 @@
           register: current_image
           changed_when: false
 
-        - name: Display Friendly Message
-          debug:
+        - name: Display Message
+          debug::
             msg: >
               Deployment failed to update to image '{{ image_version }}'.
               Rolled back to the previous working image '{{ current_image.stdout }}'.
