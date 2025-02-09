@@ -15,6 +15,7 @@ spec:
       containers:
         - name: nginx
           image: ghcr.io/salah-96/examination-assignment:v1.1.0
+          imagePullPolicy: Always
           ports:
             - containerPort: 80
       imagePullSecrets:
